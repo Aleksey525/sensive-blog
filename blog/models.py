@@ -12,12 +12,16 @@ class PostQuerySet(models.QuerySet):
 
 
     def popular(self):
-        return self.annotate(likes_count=Count('likes')).order_by('-likes_count')
+        return self.annotate(likes_count=Count('likes', distinct=True)).order_by('-likes_count')
+
+
+    def fresh(self):
+        return self.annotate(Count('comments')).order_by('published_at')
 
 
     def fetch_with_comments_count(self):
         most_popular_posts_ids = [post.id for post in self]
-        posts_with_comments = Post.objects.filter(id__in=most_popular_posts_ids).annotate(comments_count=Count('comments'))
+        posts_with_comments = Post.objects.filter(id__in=most_popular_posts_ids).annotate(comments_count=Count('comments', distinct=True))
         ids_and_comments = posts_with_comments.values_list('id', 'comments_count')
         count_for_id = dict(ids_and_comments)
         for post in self:
@@ -29,6 +33,17 @@ class TagQuerySet(models.QuerySet):
     def popular(self):
         popular_tags = self.annotate(Count('posts')).order_by('-posts__count')
         return popular_tags
+
+
+    # def a(self):
+    #     popular_tags_ids = [tag.id for tag in self]
+    #     tag_with_posts = Tag.objects.filter(id__in=popular_tags_ids).annotate(posts_count=Count('posts'))
+    #     ids_and_posts = tag_with_posts.values_list('id', 'posts_count')
+    #     count_for_id = dict(ids_and_posts)
+    #     for tag in self:
+    #         tag.posts_count = count_for_id[tag.id]
+    #     return list(self)
+
 
 class Post(models.Model):
     title = models.CharField('Заголовок', max_length=200)
